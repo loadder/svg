@@ -53,6 +53,16 @@ def load_dataset(opt):
                 train=False,
                 seq_len=opt.n_eval,
                 image_size=opt.image_width)
+    elif opt.dataset == 'KTH':
+        from data.kth import KTH
+        train_data = KTH(
+                root=opt.data_root,
+                train=True,
+                label="./label/train")
+        test_data = KTH(
+                root=opt.data_root,
+                train=False,
+                label="./label/test")
     
     return train_data, test_data
 
