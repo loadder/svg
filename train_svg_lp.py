@@ -15,7 +15,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--lr', default=0.002, type=float, help='learning rate')
 parser.add_argument('--beta1', default=0.9, type=float, help='momentum term for adam')
 parser.add_argument('--batch_size', default=100, type=int, help='batch size')
-parser.add_argument('--test_batch_size', default=20, type=int, help='test batch size')
 parser.add_argument('--log_dir', default='logs/lp', help='base directory to save logs')
 parser.add_argument('--model_dir', default='', help='base directory to save logs')
 parser.add_argument('--name', default='', help='identifier for directory')
@@ -23,7 +22,7 @@ parser.add_argument('--data_root', default='data', help='root directory for data
 parser.add_argument('--optimizer', default='adam', help='optimizer to train with')
 parser.add_argument('--niter', type=int, default=300, help='number of epochs to train for')
 parser.add_argument('--seed', default=1, type=int, help='manual seed')
-parser.add_argument('--epoch_size', type=int, default=600, help='epoch size')
+parser.add_argument('--total_sample', type=int, default=600, help='epoch size')
 parser.add_argument('--image_width', type=int, default=64, help='the height / width of the input image to network')
 parser.add_argument('--channels', default=1, type=int)
 parser.add_argument('--dataset', default='smmnist', help='dataset to train with')
@@ -158,7 +157,7 @@ train_loader = DataLoader(train_data,
                           pin_memory=True)
 test_loader = DataLoader(test_data,
                          num_workers=opt.data_threads,
-                         batch_size=opt.test_batch_size,
+                         batch_size=opt.batch_size,
                          shuffle=True,
                          drop_last=True,
                          pin_memory=True)
@@ -168,14 +167,14 @@ def get_training_batch():
         for sequence in train_loader:
             batch = utils.normalize_data(opt, dtype, sequence)
             yield batch
-#training_batch_generator = get_training_batch()
+training_batch_generator = get_training_batch()
 
 def get_testing_batch():
     while True:
         for sequence in test_loader:
             batch = utils.normalize_data(opt, dtype, sequence)
             yield batch 
-#testing_batch_generator = get_testing_batch()
+testing_batch_generator = get_testing_batch()
 
 # --------- plotting funtions ------------------------------------
 def plot(x, epoch):
@@ -333,6 +332,7 @@ def train(x):
     return mse.data.cpu().numpy()/(opt.n_past+opt.n_future), kld.data.cpu().numpy()/(opt.n_future+opt.n_past)
 
 # --------- training loop ------------------------------------
+epoch_size = int(opt.total_sample / opt.batch_size) + 1
 for epoch in range(opt.niter):
     frame_predictor.train()
     posterior.train()
@@ -341,13 +341,21 @@ for epoch in range(opt.niter):
     decoder.train()
     epoch_mse = 0
     epoch_kld = 0
-    for i, batch in enumerate(train_loader):
-        x = utils.normalize_data(opt, dtype, batch)
+    progress = progressbar.ProgressBar(max_value=epoch_size).start()
+    for i in range(epoch_size):
+        progress.update(i+1)
+        x = next(training_batch_generator)
+
         # train frame_predictor 
         mse, kld = train(x)
-        epoch_mse += mse * x[0].shape[0]
-        epoch_kld += kld * x[0].shape[0]
-        print('Epoch %d Iter %d mse loss: %.5f | kld loss: %.5f' % (epoch+1, i+1, mse, kld))
+        epoch_mse += mse
+        epoch_kld += kld
+
+
+    progress.finish()
+    utils.clear_progressbar()
+
+    print('[%02d] mse loss: %.5f | kld loss: %.5f (%d)' % (epoch, epoch_mse/epoch_size, epoch_kld/epoch_size, epoch*epoch_size*opt.batch_size))
 
     # plot some stuff
     frame_predictor.eval()
@@ -356,11 +364,9 @@ for epoch in range(opt.niter):
     posterior.eval()
     prior.eval()
     
-    for j, batch in enumerate(test_loader):
-    #plot(x, epoch)
-        x = utils.normalize_data(opt, dtype, batch)
-        plot_rec(x, epoch)
-        break
+    x = next(testing_batch_generator)
+    plot(x, epoch)
+    plot_rec(x, epoch)
 
     # save the model
     torch.save({
@@ -371,7 +377,7 @@ for epoch in range(opt.niter):
         'prior': prior,
         'opt': opt},
         '%s/model.pth' % opt.log_dir)
-    #if epoch % 10 == 0:
-    #    print('log dir: %s' % opt.log_dir)
+    if epoch % 10 == 0:
+        print('log dir: %s' % opt.log_dir)
         
 
