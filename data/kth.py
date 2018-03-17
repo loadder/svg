@@ -21,7 +21,7 @@ def default_loader(path):
 def transform(fea):
     return torch.Tensor(fea).permute(3, 0, 1, 2)
 
-class videoDataset(data.Dataset):
+class KTH(data.Dataset):
     def __init__(self, root, label, transform=None, target_transform=None,
                  loader=default_loader, train=True):
         fh = open(label)
@@ -41,7 +41,7 @@ class videoDataset(data.Dataset):
         fea = self.loader(os.path.join(self.root, fn))
         if self.transform is not None:
             fea = self.transform(fea)
-        return fea, fn
+        return fea
         # return fea
 
     def __len__(self):

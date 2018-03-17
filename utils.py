@@ -58,11 +58,11 @@ def load_dataset(opt):
         train_data = KTH(
                 root=opt.data_root,
                 train=True,
-                label="./label/train")
+                label="./label/train.txt")
         test_data = KTH(
                 root=opt.data_root,
                 train=False,
-                label="./label/test")
+                label="./label/test.txt")
     
     return train_data, test_data
 
@@ -70,7 +70,7 @@ def sequence_input(seq, dtype):
     return [Variable(x.type(dtype)) for x in seq]
 
 def normalize_data(opt, dtype, sequence):
-    if opt.dataset == 'smmnist' or opt.dataset == 'kth' or opt.dataset == 'bair' :
+    if opt.dataset == 'smmnist' or opt.dataset == 'KTH' or opt.dataset == 'bair':
         sequence.transpose_(0, 1)
         sequence.transpose_(3, 4).transpose_(2, 3)
     else:
