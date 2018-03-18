@@ -190,9 +190,11 @@ def plot(x, epoch):
     gt_seq = [x[i] for i in range(len(x))]
 
     for s in range(nsample):
+        """
         frame_predictor.init_hidden()
         posterior.init_hidden()
         prior.init_hidden()
+        """
         gen_seq[s].append(x[0])
         x_in = x[0]
         for i in range(1, opt.n_eval):
@@ -205,13 +207,13 @@ def plot(x, epoch):
             if i < opt.n_past:
                 h_target = encoder(x[i])
                 h_target = h_target[0].detach()
-                z_t, _, _ = posterior(h_target)
-                frame_predictor(torch.cat([h, z_t], 1))
+                z_t, _, _ = posterior(h_target, i)
+                frame_predictor(torch.cat([h, z_t], 1), i)
                 x_in = x[i]
                 gen_seq[s].append(x_in)
             else:
-                z_t, _, _ = prior(h)
-                h = frame_predictor(torch.cat([h, z_t], 1)).detach()
+                z_t, _, _ = prior(h, i)
+                h = frame_predictor(torch.cat([h, z_t], 1), i).detach()
                 x_in = decoder([h, skip]).detach()
                 gen_seq[s].append(x_in)
 
@@ -262,8 +264,10 @@ def plot(x, epoch):
 
 
 def plot_rec(x, epoch):
+    """
     frame_predictor.init_hidden()
     posterior.init_hidden()
+    """
     gen_seq = []
     gen_seq.append(x[0])
     x_in = x[0]
@@ -277,12 +281,12 @@ def plot_rec(x, epoch):
         h_target, _ = h_target
         h = h.detach()
         h_target = h_target.detach()
-        z_t, _, _= posterior(h_target)
+        z_t, _, _= posterior(h_target, i)
         if i < opt.n_past:
-            frame_predictor(torch.cat([h, z_t], 1)) 
+            frame_predictor(torch.cat([h, z_t], 1), i)
             gen_seq.append(x[i])
         else:
-            h_pred = frame_predictor(torch.cat([h, z_t], 1))
+            h_pred = frame_predictor(torch.cat([h, z_t], 1), i)
             x_pred = decoder([h_pred, skip]).detach()
             gen_seq.append(x_pred)
    
@@ -306,9 +310,11 @@ def train(x):
     decoder.zero_grad()
 
     # initialize the hidden state.
+    """
     frame_predictor.init_hidden()
     posterior.init_hidden()
     prior.init_hidden()
+    """
 
     mse = 0
     kld = 0
@@ -319,9 +325,9 @@ def train(x):
             h, skip = h
         else:
             h = h[0]
-        z_t, mu, logvar = posterior(h_target)
-        _, mu_p, logvar_p = prior(h)
-        h_pred = frame_predictor(torch.cat([h, z_t], 1))
+        z_t, mu, logvar = posterior(h_target, i)
+        _, mu_p, logvar_p = prior(h, i)
+        h_pred = frame_predictor(torch.cat([h, z_t], 1), i)
         x_pred = decoder([h_pred, skip])
         mse += mse_criterion(x_pred, x[i])
         kld += kl_criterion(mu, logvar, mu_p, logvar_p)
