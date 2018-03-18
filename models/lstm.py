@@ -22,8 +22,8 @@ class lstm(nn.Module):
         def init_hidden():
             hidden = []
             for i in range(self.n_layers):
-                hidden.append((Variable(torch.zeros(self.batch_size, self.hidden_size).cuda()),
-                               Variable(torch.zeros(self.batch_size, self.hidden_size).cuda())))
+                hidden.append((Variable(torch.zeros(input.shape[0], self.hidden_size).cuda()),
+                               Variable(torch.zeros(input.shape[0], self.hidden_size).cuda())))
             return hidden
         if t == 1:
             self.hidden = init_hidden()
@@ -53,8 +53,8 @@ class gaussian_lstm(nn.Module):
         def init_hidden():
             hidden = []
             for i in range(self.n_layers):
-                hidden.append((Variable(torch.zeros(self.batch_size, self.hidden_size).cuda()),
-                               Variable(torch.zeros(self.batch_size, self.hidden_size).cuda())))
+                hidden.append((Variable(torch.zeros(input.shape[0], self.hidden_size).cuda()),
+                               Variable(torch.zeros(input.shape[0], self.hidden_size).cuda())))
             return hidden
 
         def reparameterize(mu, logvar):
