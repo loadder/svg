@@ -144,6 +144,13 @@ posterior.cuda()
 prior.cuda()
 encoder.cuda()
 decoder.cuda()
+"""
+frame_predictor = nn.DataParallel(frame_predictor)
+posterior = nn.DataParallel(posterior)
+prior = nn.DataParallel(prior)
+encoder = nn.DataParallel(encoder)
+decoder = nn.DataParallel(decoder)
+"""
 mse_criterion.cuda()
 
 # --------- load a dataset ------------------------------------
@@ -183,9 +190,9 @@ def plot(x, epoch):
     gt_seq = [x[i] for i in range(len(x))]
 
     for s in range(nsample):
-        frame_predictor.hidden = frame_predictor.init_hidden()
-        posterior.hidden = posterior.init_hidden()
-        prior.hidden = prior.init_hidden()
+        frame_predictor.init_hidden()
+        posterior.init_hidden()
+        prior.init_hidden()
         gen_seq[s].append(x[0])
         x_in = x[0]
         for i in range(1, opt.n_eval):
@@ -255,8 +262,8 @@ def plot(x, epoch):
 
 
 def plot_rec(x, epoch):
-    frame_predictor.hidden = frame_predictor.init_hidden()
-    posterior.hidden = posterior.init_hidden()
+    frame_predictor.init_hidden()
+    posterior.init_hidden()
     gen_seq = []
     gen_seq.append(x[0])
     x_in = x[0]
@@ -299,9 +306,9 @@ def train(x):
     decoder.zero_grad()
 
     # initialize the hidden state.
-    frame_predictor.hidden = frame_predictor.init_hidden()
-    posterior.hidden = posterior.init_hidden()
-    prior.hidden = prior.init_hidden()
+    frame_predictor.init_hidden()
+    posterior.init_hidden()
+    prior.init_hidden()
 
     mse = 0
     kld = 0
@@ -332,7 +339,7 @@ def train(x):
     return mse.data.cpu().numpy()/(opt.n_past+opt.n_future), kld.data.cpu().numpy()/(opt.n_future+opt.n_past)
 
 # --------- training loop ------------------------------------
-epoch_size = int(opt.total_sample / opt.batch_size) + 1
+epoch_size = int(opt.total_sample / opt.batch_size) + (opt.total_sample % opt.batch_size != 0)
 for epoch in range(opt.niter):
     frame_predictor.train()
     posterior.train()
@@ -348,6 +355,7 @@ for epoch in range(opt.niter):
 
         # train frame_predictor 
         mse, kld = train(x)
+        torch.cuda.empty_cache()
         epoch_mse += mse
         epoch_kld += kld
 
@@ -358,15 +366,7 @@ for epoch in range(opt.niter):
     print('[%02d] mse loss: %.5f | kld loss: %.5f (%d)' % (epoch, epoch_mse/epoch_size, epoch_kld/epoch_size, epoch*epoch_size*opt.batch_size))
 
     # plot some stuff
-    frame_predictor.eval()
-    encoder.eval()
-    decoder.eval()
-    posterior.eval()
-    prior.eval()
     
-    x = next(testing_batch_generator)
-    plot(x, epoch)
-    plot_rec(x, epoch)
 
     # save the model
     torch.save({
@@ -379,5 +379,13 @@ for epoch in range(opt.niter):
         '%s/model.pth' % opt.log_dir)
     if epoch % 10 == 0:
         print('log dir: %s' % opt.log_dir)
+    frame_predictor.eval()
+    encoder.eval()
+    decoder.eval()
+    posterior.eval()
+    prior.eval()
+    x = next(testing_batch_generator)
         
+    plot(x, epoch)
 
+    plot_rec(x, epoch)

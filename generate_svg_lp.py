@@ -75,8 +75,8 @@ encoder.cuda()
 decoder.cuda()
 
 # ---------------- set the options ----------------
-opt.dataset = tmp['opt'].dataset
-opt.data_root = tmp['opt'].data_root
+#opt.dataset = tmp['opt'].dataset
+#opt.data_root = tmp['opt'].data_root
 opt.last_frame_skip = tmp['opt'].last_frame_skip
 opt.channels = tmp['opt'].channels
 opt.image_width = tmp['opt'].image_width
@@ -91,13 +91,11 @@ train_loader = DataLoader(train_data,
                           num_workers=opt.num_threads,
                           batch_size=opt.batch_size,
                           shuffle=True,
-                          drop_last=True,
                           pin_memory=True)
 test_loader = DataLoader(test_data,
                          num_workers=opt.num_threads,
                          batch_size=opt.batch_size,
                          shuffle=True,
-                         drop_last=True,
                          pin_memory=True)
 
 def get_training_batch():
@@ -118,8 +116,8 @@ testing_batch_generator = get_testing_batch()
 
 def make_gifs(x, idx, name):
     # get approx posterior sample
-    frame_predictor.hidden = frame_predictor.init_hidden()
-    posterior.hidden = posterior.init_hidden()
+    frame_predictor.init_hidden()
+    posterior.init_hidden()
     posterior_gen = []
     posterior_gen.append(x[0])
     x_in = x[0]
@@ -151,9 +149,9 @@ def make_gifs(x, idx, name):
         progress.update(s+1)
         gen_seq = []
         gt_seq = []
-        frame_predictor.hidden = frame_predictor.init_hidden()
-        posterior.hidden = posterior.init_hidden()
-        prior.hidden = prior.init_hidden()
+        frame_predictor.init_hidden()
+        posterior.init_hidden()
+        prior.init_hidden()
         x_in = x[0]
         all_gen.append([])
         all_gen[s].append(x_in)
