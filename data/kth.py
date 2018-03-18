@@ -5,17 +5,17 @@ import numpy as np
 from torchvision.transforms import Normalize, CenterCrop
 import PIL.Image as Image
 
-def default_loader(path):
+def default_loader(path, length):
     files = os.listdir(path)
     files = sorted(files, key=lambda x:int(x.split('.')[0]))
     images = []
     cnt = 0
     for idx, filename in enumerate(files):
-        img = Image.open(path + '/' + filename).convert("RGB")
-        images.append(img / 255.0)
-        cnt += 1
-        if cnt > 20:
+        if cnt > length - 1:
             break
+        img = Image.open(path + '/' + filename).convert("RGB")
+        images.append(np.asarray(img) / 255.0)
+        cnt += 1
     return np.array(images)
 
 def transform(fea):
@@ -23,22 +23,22 @@ def transform(fea):
 
 class KTH(data.Dataset):
     def __init__(self, root, label, transform=None, target_transform=None,
-                 loader=default_loader, train=True):
+                 loader=default_loader, train=True, seq_len=20):
         fh = open(label)
         videos = []
         for line in fh.readlines():
             video_id = line.strip()
             videos.append(video_id)
-        self.root = root + '/train/' if train else root + '/test/'
+        self.root = root
         self.videos = videos
         self.transform = transform
         self.target_transform = target_transform
         self.loader = loader
-        self.crop = CenterCrop(224)
+        self.length = seq_len
 
     def __getitem__(self, index):
         fn = self.videos[index]
-        fea = self.loader(os.path.join(self.root, fn))
+        fea = self.loader(os.path.join(self.root, fn), self.length)
         if self.transform is not None:
             fea = self.transform(fea)
         return fea

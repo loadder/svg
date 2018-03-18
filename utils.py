@@ -58,10 +58,12 @@ def load_dataset(opt):
         train_data = KTH(
                 root=opt.data_root,
                 train=True,
+                seq_len=opt.max_step,
                 label="./label/train.txt")
         test_data = KTH(
                 root=opt.data_root,
                 train=False,
+                seq_len=opt.max_step,
                 label="./label/test.txt")
     
     return train_data, test_data

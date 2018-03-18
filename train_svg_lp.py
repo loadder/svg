@@ -42,16 +42,19 @@ parser.add_argument('--num_digits', type=int, default=2, help='number of digits 
 parser.add_argument('--last_frame_skip', action='store_true', help='if true, skip connections go between frame t and frame t+t rather than last ground truth frame')
 
 
-
 opt = parser.parse_args()
 if opt.model_dir != '':
     # load model and continue training from checkpoint
     saved_model = torch.load('%s/model.pth' % opt.model_dir)
     optimizer = opt.optimizer
     model_dir = opt.model_dir
+    data_root = opt.data_root
+    total_sample = opt.total_sample
     opt = saved_model['opt']
+    opt.total_sample = total_sample
     opt.optimizer = optimizer
     opt.model_dir = model_dir
+    opt.data_root = data_root
     opt.log_dir = '%s/continued' % opt.log_dir
 else:
     name = 'model=%s%dx%d-rnn_size=%d-predictor-posterior-prior-rnn_layers=%d-%d-%d-n_past=%d-n_future=%d-lr=%.4f-g_dim=%d-z_dim=%d-last_frame_skip=%s-beta=%.7f%s' % (opt.model, opt.image_width, opt.image_width, opt.rnn_size, opt.predictor_rnn_layers, opt.posterior_rnn_layers, opt.prior_rnn_layers, opt.n_past, opt.n_future, opt.lr, opt.g_dim, opt.z_dim, opt.last_frame_skip, opt.beta, opt.name)
@@ -121,6 +124,13 @@ else:
     encoder.apply(utils.init_weights)
     decoder.apply(utils.init_weights)
 
+"""
+frame_predictor = nn.DataParallel(frame_predictor)
+posterior = nn.DataParallel(posterior)
+prior = nn.DataParallel(prior)
+encoder = nn.DataParallel(encoder)
+decoder = nn.DataParallel(decoder)
+"""
 frame_predictor_optimizer = opt.optimizer(frame_predictor.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 posterior_optimizer = opt.optimizer(posterior.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
 prior_optimizer = opt.optimizer(prior.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -160,13 +170,12 @@ train_loader = DataLoader(train_data,
                           num_workers=opt.data_threads,
                           batch_size=opt.batch_size,
                           shuffle=True,
-                          drop_last=True,
                           pin_memory=True)
 test_loader = DataLoader(test_data,
                          num_workers=opt.data_threads,
                          batch_size=opt.batch_size,
-                         shuffle=True,
-                         drop_last=True,
+                         shuffle=False,
+                          drop_last=True,
                          pin_memory=True)
 
 def get_training_batch():
@@ -315,7 +324,7 @@ def train(x):
     posterior.init_hidden()
     prior.init_hidden()
     """
-
+    import pdb;pdb.set_trace()
     mse = 0
     kld = 0
     for i in range(1, opt.n_past+opt.n_future):
@@ -358,13 +367,11 @@ for epoch in range(opt.niter):
     for i in range(epoch_size):
         progress.update(i+1)
         x = next(training_batch_generator)
-
         # train frame_predictor 
         mse, kld = train(x)
         torch.cuda.empty_cache()
         epoch_mse += mse
         epoch_kld += kld
-
 
     progress.finish()
     utils.clear_progressbar()
@@ -391,7 +398,7 @@ for epoch in range(opt.niter):
     posterior.eval()
     prior.eval()
     x = next(testing_batch_generator)
-        
+    import pdb;pdb.set_trace()    
     plot(x, epoch)
 
     plot_rec(x, epoch)
