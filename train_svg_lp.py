@@ -216,13 +216,13 @@ def plot(x, epoch):
             if i < opt.n_past:
                 h_target = encoder(x[i])
                 h_target = h_target[0].detach()
-                z_t, _, _ = posterior(h_target, i)
+                z_t, _, _ = posterior(h_target, init=(i==1))
                 frame_predictor(torch.cat([h, z_t], 1), i)
                 x_in = x[i]
                 gen_seq[s].append(x_in)
             else:
-                z_t, _, _ = prior(h, i)
-                h = frame_predictor(torch.cat([h, z_t], 1), i).detach()
+                z_t, _, _ = prior(h, init=(i==opt.n_past))
+                h = frame_predictor(torch.cat([h, z_t], 1), init=(i==opt.n_past)).detach()
                 x_in = decoder([h, skip]).detach()
                 gen_seq[s].append(x_in)
 
@@ -290,12 +290,12 @@ def plot_rec(x, epoch):
         h_target, _ = h_target
         h = h.detach()
         h_target = h_target.detach()
-        z_t, _, _= posterior(h_target, i)
+        z_t, _, _ = posterior(h_target, init=(i==1))
         if i < opt.n_past:
-            frame_predictor(torch.cat([h, z_t], 1), i)
+            frame_predictor(torch.cat([h, z_t], 1), init=(i==1))
             gen_seq.append(x[i])
         else:
-            h_pred = frame_predictor(torch.cat([h, z_t], 1), i)
+            h_pred = frame_predictor(torch.cat([h, z_t], 1), init=(i==opt.n_past))
             x_pred = decoder([h_pred, skip]).detach()
             gen_seq.append(x_pred)
    
@@ -334,9 +334,9 @@ def train(x):
             h, skip = h
         else:
             h = h[0]
-        z_t, mu, logvar = posterior(h_target, i)
-        _, mu_p, logvar_p = prior(h, i)
-        h_pred = frame_predictor(torch.cat([h, z_t], 1), i)
+        z_t, mu, logvar = posterior(h_target, init=(i==1))
+        _, mu_p, logvar_p = prior(h, init=(i==1))
+        h_pred = frame_predictor(torch.cat([h, z_t], 1), init=(i==1))
         x_pred = decoder([h_pred, skip])
         mse += mse_criterion(x_pred, x[i])
         kld += kl_criterion(mu, logvar, mu_p, logvar_p)

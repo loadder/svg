@@ -18,14 +18,14 @@ class lstm(nn.Module):
                 nn.Tanh())
         #self.hidden = self.init_hidden()
 
-    def forward(self, input, t):
+    def forward(self, input, init=True):
         def init_hidden():
             hidden = []
             for i in range(self.n_layers):
                 hidden.append((Variable(torch.zeros(input.shape[0], self.hidden_size).cuda()),
                                Variable(torch.zeros(input.shape[0], self.hidden_size).cuda())))
             return hidden
-        if t == 1:
+        if init:
             self.hidden = init_hidden()
         embedded = self.embed(input.view(-1, self.input_size))
         h_in = embedded
@@ -49,7 +49,7 @@ class gaussian_lstm(nn.Module):
         self.logvar_net = nn.Linear(hidden_size, output_size)
         #self.hidden = self.init_hidden()
 
-    def forward(self, input, t):
+    def forward(self, input, init=True):
         def init_hidden():
             hidden = []
             for i in range(self.n_layers):
@@ -61,7 +61,7 @@ class gaussian_lstm(nn.Module):
             logvar = logvar.mul(0.5).exp_()
             eps = Variable(logvar.data.new(logvar.size()).normal_())
             return eps.mul(logvar).add_(mu)
-        if t == 1:
+        if init:
             self.hidden = init_hidden()
 
         embedded = self.embed(input.view(-1, self.input_size))
