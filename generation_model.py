@@ -21,12 +21,14 @@ class generation(nn.Module):
         self.hidden = self.rnn(encoded_x, self.hidden)
         self.h = self.hidden[0]
         posterior_z, posterior_mu, posterior_logvar = self.posterior([self.h, encoded_x])
+        """
         if t == 0:
             prior_mu = Variable(torch.zeros([input.shape[0], self.z_dim])).cuda()
             prior_logvar = Variable(torch.zeros([input.shape[0], self.z_dim])).cuda()
             prior_z = Variable(torch.zeros([input.shape[0], self.z_dim]).normal_()).cuda()
         else:
-            prior_z, prior_mu, prior_logvar = self.prior(self.h)
+        """
+        prior_z, prior_mu, prior_logvar = self.prior(self.h)
         z = posterior_z if self.training else prior_z
         pred_frame = self.decoder([z, skip])
         return pred_frame, prior_mu, prior_logvar, posterior_mu, posterior_logvar
